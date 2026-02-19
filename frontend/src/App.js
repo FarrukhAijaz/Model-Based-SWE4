@@ -30,8 +30,58 @@ const STEPS = [
 // Main App Component
 // ===========================================================================
 export default function App() {
-  // ...existing code...
+  // State
+  const [health, setHealth] = useState(null);
+  const [checkingHealth, setCheckingHealth] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [modelFile, setModelFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [sessionId, setSessionId] = useState(null);
+  const [analysis, setAnalysis] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [templateConfig, setTemplateConfig] = useState({ num_scenarios: 5, start_time: '0', stop_time: '', time_step: '' });
+  const [generatingTemplate, setGeneratingTemplate] = useState(false);
+  const [templateInfo, setTemplateInfo] = useState(null);
+  const [testDataFile, setTestDataFile] = useState(null);
+  const [uploadingTestData, setUploadingTestData] = useState(false);
+  const [testDataValidation, setTestDataValidation] = useState(null);
+  const [options, setOptions] = useState({ coverage: true, output_report: true });
+  const [jobId, setJobId] = useState(null);
+  const [jobStatus, setJobStatus] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [error, setError] = useState(null);
+  const [sampleAvailable, setSampleAvailable] = useState(false);
+  const [sampleInfo, setSampleInfo] = useState(null);
+
+  // Refs
   const logContainerRef = useRef(null);
+  const pollRef = useRef(null);
+
+  // Helper function to add logs
+  const addLog = useCallback((type, message) => {
+    setLogs(prev => [...prev, { type, message, time: timeNow() }]);
+  }, []);
+
+  // ── Health check & sample model info on mount ──
+  useEffect(() => {
+    const init = async () => {
+      await checkHealth();
+      
+      try {
+        const { data } = await api.get('/api/sample-files');
+        setSampleAvailable(data.model_available);
+        setSampleInfo(data);
+      } catch {
+        setSampleAvailable(false);
+      }
+    };
+    
+    init();
+    
+    // Poll health every 5 seconds
+    const healthPoll = setInterval(checkHealth, 5000);
+    return () => clearInterval(healthPoll);
+  }, []);
 
   // ── Health check ──
   const checkHealth = useCallback(async () => {
@@ -46,26 +96,15 @@ export default function App() {
     }
   }, []);
 
-  return (
-    <div className="home-container">
-      <div className="logo-section">
-        <img src={process.env.PUBLIC_URL + '/Ford_Otosan_logo.svg.png'} alt="Ford Otosan Logo" className="ford-logo" />
-        <div className="app-title">Synapse Test Manager</div>
-        <div className="stm">(STM)</div>
-        <div className="tiles-row">
-          <div className="tile">
-            <img src={process.env.PUBLIC_URL + '/matlab.gif'} alt="Model Based SWE4" className="tile-icon" />
-            <div className="tile-label">Model Based SWE4</div>
-          </div>
-          <div className="tile">
-            <img src={process.env.PUBLIC_URL + '/C_C_pp.jpeg'} alt="Code Based SWE4" className="tile-icon" />
-            <div className="tile-label">Code Based SWE4</div>
-          </div>
-        </div>
-        <div className="version">v1.0.0</div>
-      </div>
-    </div>
+  // ── Upload handler ──
+  const handleUpload = async () => {
+    setUploading(true);
+    setError(null);
+    addLog('phase', 'Uploading model...');
 
+    try {
+      const formData = new FormData();
+      formData.append('model_file', modelFile);
       const { data } = await api.post('/api/upload', formData);
       setSessionId(data.session_id);
       addLog('success', `Model uploaded (session: ${data.session_id})`);
