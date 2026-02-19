@@ -1,10 +1,10 @@
 """
-Simulink Test Automation - FastAPI Backend
-==========================================
-Connects to a shared MATLAB session and orchestrates Simulink unit testing
-via the MATLAB Engine API for Python.
+Synapse Test Manager - Multi-Module FastAPI Backend
+====================================================
+Orchestrates both Model-Based and Code-Based SWE4 testing.
+Each module runs independently so if one fails, the other continues working.
 
-Prerequisites:
+Prerequisites (for Model-Based):
     - MATLAB with Simulink, Simulink Test, and Simulink Coverage licenses
     - MATLAB Engine API for Python installed
     - A shared MATLAB session running (run `matlab.engine.shareEngine` in MATLAB)
@@ -36,6 +36,18 @@ try:
     from openpyxl import Workbook
 except ImportError:
     Workbook = None
+
+# ---------------------------------------------------------------------------
+# Import Module Routers with Error Handling
+# ---------------------------------------------------------------------------
+CODE_BASED_AVAILABLE = False
+try:
+    from code_based import router as code_based_router
+    CODE_BASED_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Code-based module not available: {e}")
+except Exception as e:
+    print(f"Error loading code-based module: {e}")
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -157,24 +169,44 @@ class RunOptions(BaseModel):
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting Simulink Test Automation Server")
+    logger.info("="*70)
+    logger.info("🚀 Starting Synapse Test Manager")
+    logger.info("="*70)
+    
+    # Initialize Model-Based module
+    try:
+        logger.info("✓ Model-Based SWE4 module initialized")
+    except Exception as e:
+        logger.error(f"✗ Model-Based SWE4 module initialization failed: {e}")
+    
+    # Initialize Code-Based module
+    if CODE_BASED_AVAILABLE:
+        logger.info("✓ Code-Based SWE4 module initialized")
+    else:
+        logger.warning("⚠ Code-Based SWE4 module not available (under development)")
+    
+    logger.info("="*70)
+    logger.info("✓ All available modules loaded. Server ready.")
+    logger.info("="*70)
+    
     yield
-    logger.info("Shutting down...")
+    
+    logger.info("🛑 Shutting down Synapse Test Manager...")
     global matlab_engine
     if matlab_engine is not None:
         try:
             matlab_engine.quit()
         except Exception:
             pass
-        matlab_engine = None
+    logger.info("✓ Cleanup completed")
 
 
 # ---------------------------------------------------------------------------
 # FastAPI App
 # ---------------------------------------------------------------------------
 app = FastAPI(
-    title="Simulink Test Automation",
-    description="Automates Simulink unit testing via MATLAB Engine API",
+    title="Synapse Test Manager",
+    description="Multi-module automated testing platform (Model-Based & Code-Based SWE4)",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -186,6 +218,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include Code-Based Router (if available)
+if CODE_BASED_AVAILABLE:
+    try:
+        app.include_router(code_based_router)
+        logger.info("✓ Code-Based SWE4 router included")
+    except Exception as e:
+        logger.error(f"Failed to include Code-Based SWE4 router: {e}")
+else:
+    logger.info("⚠ Code-Based SWE4 router not available")
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +251,10 @@ async def health_check():
                 "status": "error",
                 "message": "matlab.engine Python package not installed",
                 "matlab_connected": False,
+                "modules": {
+                    "model_based": "unavailable",
+                    "code_based": "available" if CODE_BASED_AVAILABLE else "unavailable",
+                },
             },
         )
     except Exception:
@@ -226,6 +272,10 @@ async def health_check():
                 "matlab_connected": False,
                 "available_sessions": matlab_sessions,
                 "licenses": licenses,
+                "modules": {
+                    "model_based": "degraded",
+                    "code_based": "available" if CODE_BASED_AVAILABLE else "unavailable",
+                },
             }
         )
 
@@ -234,6 +284,10 @@ async def health_check():
         "matlab_connected": matlab_connected,
         "available_sessions": matlab_sessions,
         "licenses": licenses,
+        "modules": {
+            "model_based": "ok",
+            "code_based": "available" if CODE_BASED_AVAILABLE else "unavailable",
+        },
         "timestamp": datetime.utcnow().isoformat(),
     }
 
