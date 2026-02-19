@@ -30,6 +30,93 @@ const STEPS = [
 // Main App Component
 // ===========================================================================
 export default function App() {
+  // Navigation state
+  const [page, setPage] = useState('home'); // 'home', 'model-based', 'code-based'
+
+  if (page === 'home') {
+    return <HomePage onNavigate={setPage} />;
+  }
+
+  if (page === 'model-based') {
+    return <ModelBasedPage onBackToHome={() => setPage('home')} />;
+  }
+
+  if (page === 'code-based') {
+    return <CodeBasedPage onBackToHome={() => setPage('home')} />;
+  }
+}
+
+// ===========================================================================
+// Home Page Component
+// ===========================================================================
+function HomePage({ onNavigate }) {
+  return (
+    <div className="home-page">
+      <div className="home-container">
+        <img src={process.env.PUBLIC_URL + '/FO.png'} alt="Ford Otosan Logo" className="ford-logo-home" />
+        <h1 className="app-title-home">Synapse Test Manager</h1>
+        <p className="app-subtitle">
+          <em>Automated Testing & Verification Platform</em>
+        </p>
+        <div className="version-home">v1.0.0</div>
+
+        <div className="tiles-container">
+          <div className="tile-card" onClick={() => onNavigate('model-based')}>
+            <img src={process.env.PUBLIC_URL + '/matlab.svg'} alt="Model Based SWE4" className="tile-image" />
+            <h2>Model Based SWE4</h2>
+            <p>Simulink model testing & verification</p>
+            <button className="tile-button">Start →</button>
+          </div>
+
+          <div className="tile-card" onClick={() => onNavigate('code-based')}>
+            <img src={process.env.PUBLIC_URL + '/Cpp.png'} alt="Code Based SWE4" className="tile-image" />
+            <h2>Code Based SWE4</h2>
+            <p>C/C++ code testing & analysis</p>
+            <button className="tile-button">Start →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===========================================================================
+// Code Based Page Component
+// ===========================================================================
+function CodeBasedPage({ onBackToHome }) {
+  return (
+    <div className="app-container">
+      {/* Header with back button */}
+      <header className="app-header">
+        <button className="btn btn-outline back-button" onClick={onBackToHome} style={{ marginRight: 'auto', marginBottom: 0 }}>
+          ← Back to Home
+        </button>
+        <div style={{ textAlign: 'center', flex: 1 }}>
+          <h1>Code Based SWE4</h1>
+          <p>C/C++ Testing & Analysis</p>
+        </div>
+        <div style={{ width: 50 }}></div>
+      </header>
+
+      {/* Coming Soon content */}
+      <div className="card" style={{ textAlign: 'center', maxWidth: 600, margin: '60px auto' }}>
+        <div style={{ fontSize: 80, marginBottom: 20 }}>🚀</div>
+        <h2 style={{ fontSize: 28, marginBottom: 10 }}>Coming Soon</h2>
+        <p style={{ fontSize: 16, color: 'var(--text-secondary)', marginBottom: 20 }}>
+          Code-based testing and C/C++ analysis features are under development.
+        </p>
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+          Check back soon for updates and features!
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ===========================================================================
+// Model Based SWE4 Component
+// ===========================================================================
+function ModelBasedPage({ onBackToHome }) {
   // State
   const [health, setHealth] = useState(null);
   const [checkingHealth, setCheckingHealth] = useState(false);
@@ -367,10 +454,15 @@ export default function App() {
   // ========================= RENDER =========================
   return (
     <div className="app-container">
-      {/* Header */}
+      {/* Header with back button */}
       <header className="app-header">
-        <h1>⚙ Simulink Test Automation</h1>
-        <p>Automated unit testing via MATLAB Engine API</p>
+        <button className="btn btn-outline back-button" onClick={onBackToHome} style={{ marginRight: 'auto', marginBottom: 0 }}>
+          ← Back to Home
+        </button>
+        <div style={{ textAlign: 'center', flex: 1 }}>
+          <h1>⚙ Simulink Test Automation</h1>
+          <p>Automated unit testing via MATLAB Engine API</p>
+        </div>
       </header>
 
       {/* Connection Banner */}
